@@ -1,7 +1,7 @@
 # experiment.py
 import numpy as np
 from tqdm.auto import tqdm
-from sklearn.metrics import (accuracy_score, roc_auc_score, f1_score,
+from sklearn.metrics import (accuracy_score, balanced_accuracy_score, roc_auc_score, f1_score,
                              average_precision_score, confusion_matrix,
                              precision_score, recall_score)
 
@@ -18,20 +18,27 @@ def train(model, X_train, y_train):
     return model
 
 
+def pick_threshold(y_val, p_val):
+    """Threshold with the highest balanced accuracy on VALIDATION data (never on test data)."""
+    bal = [balanced_accuracy_score(y_val, p_val >= t) for t in GRID]
+    return float(GRID[int(np.argmax(bal))])
+
+
 def _metrics(y, p, thr):
     yhat = (p >= thr).astype(int)
-    tn, fp, fn, tp = confusion_matrix(y, yhat).ravel()
+    tn, fp, fn, tp = confusion_matrix(y, yhat, labels=[0, 1]).ravel()
+    sens, spec = tp / max(tp + fn, 1), tn / max(tn + fp, 1)
     return dict(threshold=thr, accuracy=accuracy_score(y, yhat),
-                sensitivity=tp / max(tp + fn, 1), specificity=tn / max(tn + fp, 1),
+                sensitivity=sens, specificity=spec, balanced_accuracy=(sens + spec) / 2,
                 precision=precision_score(y, yhat, zero_division=0),
                 f1=f1_score(y, yhat), tp=int(tp), fp=int(fp), tn=int(tn), fn=int(fn))
 
 
 def evaluate(model, X_val, y_val, X_test, y_test, g_test=None):
-    """Threshold is chosen on VALIDATION, then frozen and applied to TEST."""
+    """Threshold (max balanced accuracy) is chosen on VALIDATION, then frozen and applied to TEST."""
     p_val, p_test = model.predict(X_val), model.predict(X_test)
-    f1s = [f1_score(y_val, p_val >= t, zero_division=0) for t in GRID]
-    thr = float(GRID[int(np.argmax(f1s))])
+    thr = pick_threshold(y_val, p_val)              # balanced accuracy: cannot reward 'predict all positive'
+    f1s = [f1_score(y_val, p_val >= t, zero_division=0) for t in GRID]   # kept for the val_f1 report
 
     per_patient = {}
     if g_test is not None:

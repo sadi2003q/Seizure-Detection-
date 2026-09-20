@@ -3,11 +3,12 @@
 ## Files
 ```
 main.ipynb          run this (top to bottom)
-preprocessing.py    prepare_data(csv) -> X, y, g   (split by PATIENT, then normalise, then shuffle train)
+preprocessing.py    prepare_data(csv) -> X, y, g   (fixed split by PATIENT), plus load_raw / make_split / select_features (used by LOSO)
 base.py             shared contract + check_params (rejects wrong parameter names)
 experiment.py       train(model, X_train, y_train)   evaluate(model, X_val, y_val, X_test, y_test, g_test)
-report.py           report(scores), compare([scores, ...])
-plots.py            plot(scores), plot_compare([scores, ...])
+loso.py             run_loso(raw, ModelClass, params=...)   Leave-One-Subject-Out
+report.py           report(scores), compare([...]), loso_report(res), loso_compare([res, ...])
+plots.py            plot(scores), plot_compare([...]), plot_loso(res)
 models/
   logistic.py       LogisticModel
   xgboost_model.py  XGBoostModel
@@ -37,6 +38,37 @@ report(scores); plot(scores)
 ```
 `g` is the patient id of each row. Optuna uses it to hold out whole patients in its cross-validation.
 
+## Per-patient normalisation (optional)
+`prepare_data(CSV_PATH, per_patient_norm=None | 'interictal' | 'all')`
+- `None` (default): one global scaler fitted on the training patients.
+- `'interictal'`: each recording group (`subject_id`) is scaled with the median/IQR of its own seizure-free
+  (label 0) windows, then the same global scaler is applied. Assumes a seizure-free calibration recording
+  for every new patient. State this in the paper. Only label-0 windows of the test patients are used for the
+  statistics, never their seizure windows, and never for training.
+- `'all'`: same, but the statistics use all of the group's windows. No labels are used, but the result
+  depends on each patient's seizure fraction (13% to 90% in this CSV), which distorts the baseline.
+Report all versions you ran. `main.ipynb` section 2b compares the three with Logistic Regression.
+
+## Leave-One-Subject-Out (LOSO)
+```python
+raw = load_raw(CSV_PATH)                                       # read the CSV once
+res = run_loso(raw, XGBoostModel, params={})                   # 20 folds, one per real patient
+loso_report(res); plot_loso(res)
+# SNN ablation, same classifier and folds, paired statistics:
+runs = [run_loso(raw, XGBoostModel, features=f, label=f) for f in ['conventional', 'snn', 'all']]
+loso_compare(runs, baseline=0)
+```
+In every fold the imputer, scaler, model and threshold are fitted WITHOUT the held-out patient
+(the threshold comes from `n_val=2` other patients). Tested: rewriting the held-out patient's features and
+labels leaves everything the model sees bit-identical.
+- Hyperparameters: fixed, or `tune=True` (Optuna inside every fold, very slow). Do NOT reuse the Optuna values
+  from the fixed split: they were tuned on patients that are held out in some LOSO folds.
+- The per-fold threshold comes from only 2 patients and can be very unstable. Use ROC-AUC and the @0.5
+  columns as the headline numbers, or raise `n_val`.
+- `hold_out=['chb16', 'chb17']` runs just those folds (quick test). `features='conventional'|'snn'|'all'` is the ablation.
+- Not fixable from the CSV: it was class-balanced by random undersampling BEFORE splitting, so balancing is
+  not fold-independent, and false alarms per hour cannot be computed.
+
 ## Split (patient level, no overlap)
 - Test: chb16, chb17 (a/b/c together), chb18, chb19, chb20, chb22
 - Validation: chb14, chb15 (threshold selection only)
@@ -52,3 +84,5 @@ Copy `models/logistic.py`, rename the classes, change `search_space` and `_build
 - Mamba here models the 22 channels as the sequence (the CSV has no time order). If the pure-PyTorch
   fallback is used instead of the official `mamba_ssm`, say so.
 - Test set = 6 patients: report the per-patient spread, not only the average.
+- The decision threshold is chosen on the validation patients by balanced accuracy, then frozen.
+  Validation is only 2 patients, so the threshold can be unstable.

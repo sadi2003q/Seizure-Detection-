@@ -24,7 +24,9 @@ def plot(scores):
     ax[2].imshow(cm, cmap='Blues')
     for i in range(2):
         for j in range(2):
-            ax[2].text(j, i, cm[i, j], ha='center', va='center', fontsize=13)
+            colour = 'white' if cm[i, j] > cm.max() / 2 else 'black'
+            ax[2].text(j, i, f'{cm[i, j]:,}', ha='center', va='center',
+                       fontsize=14, fontweight='bold', color=colour)
     ax[2].set(title=f"Confusion @ {t['threshold']:.2f}", xticks=[0, 1], yticks=[0, 1],
               xticklabels=['Non-seiz', 'Seizure'], yticklabels=['Non-seiz', 'Seizure'])
 
@@ -59,5 +61,39 @@ def plot_compare(scores_list):
     ax[1].set_ylim(0, 1)
     ax[1].legend()
     ax[1].set_title('Metrics @ validation-tuned threshold')
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_loso(res):
+    """Per-patient AUC with mean and CI, sensitivity/specificity per patient, AUC vs seizure fraction."""
+    pp, sm = res['per_patient'], res['summary']
+    order = pp.sort_values('roc_auc').reset_index(drop=True)
+    fig, ax = plt.subplots(1, 3, figsize=(19, 4.8))
+
+    ax[0].barh(order['patient'], order['roc_auc'], color='steelblue')
+    a = sm.loc['roc_auc']
+    ax[0].axvline(a['mean'], color='red', ls='--', label=f"mean {a['mean']:.3f}")
+    ax[0].axvspan(a['ci_low'], a['ci_high'], color='red', alpha=0.15, label='95% CI of mean')
+    ax[0].axvline(0.5, color='k', ls=':', lw=1)
+    ax[0].set(title='ROC-AUC per held-out patient', xlabel='ROC-AUC', xlim=(0.4, 1.0))
+    ax[0].legend(loc='lower right')
+
+    ax[1].scatter(order['specificity_at05'], order['sensitivity_at05'], s=60, color='darkorange')
+    for _, r in order.iterrows():
+        ax[1].annotate(r['patient'], (r['specificity_at05'], r['sensitivity_at05']),
+                       fontsize=7, xytext=(3, 3), textcoords='offset points')
+    ax[1].set(title='Sensitivity vs specificity per patient (threshold 0.5)',
+              xlabel='Specificity', ylabel='Sensitivity', xlim=(0, 1.02), ylim=(0, 1.02))
+
+    ax[2].scatter(pp['seizure_frac'], pp['roc_auc'], s=60, color='seagreen')
+    for _, r in pp.iterrows():
+        ax[2].annotate(r['patient'], (r['seizure_frac'], r['roc_auc']),
+                       fontsize=7, xytext=(3, 3), textcoords='offset points')
+    ax[2].axhline(0.5, color='k', ls=':', lw=1)
+    ax[2].set(title='Does AUC depend on the patient\'s seizure fraction?',
+              xlabel='Seizure fraction in the held-out patient', ylabel='ROC-AUC')
+
+    plt.suptitle(f"LOSO: {res['label']}", fontweight='bold')
     plt.tight_layout()
     plt.show()

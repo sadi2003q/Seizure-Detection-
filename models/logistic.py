@@ -23,8 +23,8 @@ class LogisticModel(ModelFamily):
 
     @classmethod
     def search_space(cls, trial):
-        return dict(C=trial.suggest_float('C', 1e-3, 10, log=True),
-                    max_iter=trial.suggest_int('max_iter', 200, 1000))
+        return dict(C=trial.suggest_float('C', 1e-4, 10, log=True),
+                    max_iter=trial.suggest_int('max_iter', 500, 3000))
 
     @classmethod
     def build(cls, **params):
@@ -32,7 +32,8 @@ class LogisticModel(ModelFamily):
         return cls._build(**params)
 
     @classmethod
-    def _build(cls, C=0.1, penalty='l2', solver='lbfgs', max_iter=300,
+    def _build(cls, C=0.1, solver='lbfgs', max_iter=2000,
                class_weight=None, random_state=42):
-        return _Logistic(C=C, penalty=penalty, solver=solver, max_iter=max_iter,
+        # L2 penalty is sklearn's default, so `penalty` is not passed (it is deprecated).
+        return _Logistic(C=C, solver=solver, max_iter=max_iter,
                          class_weight=class_weight, random_state=random_state)

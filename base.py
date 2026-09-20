@@ -5,11 +5,9 @@
 #   check_params : raises a clear error when a wrong parameter name is passed
 import inspect
 from abc import ABC, abstractmethod
-import optuna
 from sklearn.model_selection import GroupKFold
 from sklearn.metrics import roc_auc_score
 
-optuna.logging.set_verbosity(optuna.logging.WARNING)
 
 
 def check_params(family, given, build_fn):
@@ -59,6 +57,8 @@ class ModelFamily(ABC):
     def best_param(cls, X_train, y_train, g_train, n_trials=15, n_folds=4, seed=42):
         """Optuna with patient-grouped CV (a whole patient is held out per fold).
         Prints and returns the best parameters, ready for: Family.build(**best)"""
+        import optuna                     # imported here so the rest works without Optuna
+        optuna.logging.set_verbosity(optuna.logging.WARNING)
         folds = list(GroupKFold(n_splits=n_folds).split(X_train, y_train, groups=g_train))
 
         def objective(trial):
