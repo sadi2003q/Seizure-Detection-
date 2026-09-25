@@ -68,9 +68,12 @@ def load_raw(csv_path, per_patient_norm=None):
     df = pd.read_csv(csv_path)
     df['patient'] = df['subject_id'].map(_patient)
 
-    meta = ['label', 'subject_id', 'event_id', 'patient']
+    # Metadata columns to exclude from the feature matrix. Older CSVs only have the first four;
+    # newer ones also carry window_start_sample / window_center_sample / in_core_ictal.
+    meta = ['label', 'subject_id', 'event_id', 'patient',
+            'window_start_sample', 'window_center_sample', 'in_core_ictal']
     cols = [c for c in df.columns if c not in meta]
-    assert len(cols) == N_CH * N_FEAT, f'expected 924 features, got {len(cols)}'
+    assert len(cols) == N_CH * N_FEAT, f'expected {N_CH * N_FEAT} features, got {len(cols)}'
 
     feats = df[cols].replace([np.inf, -np.inf], np.nan)
     label, patient = df['label'].values, df['patient'].values

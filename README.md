@@ -49,6 +49,27 @@ report(scores); plot(scores)
   depends on each patient's seizure fraction (13% to 90% in this CSV), which distorts the baseline.
 Report all versions you ran. `main.ipynb` section 2b compares the three with Logistic Regression.
 
+## Annotation extension test (R1-7)
+Reviewer 1 asked whether extending the positive class by 10s before onset / 5s after offset
+inflates performance, versus using only the true seizure interval. Needs a CSV with an
+`in_core_ictal` column (label==1 rows split into core-ictal vs pre/post-ictal-only).
+```python
+from annotation import load_raw_annotation
+from loso import run_loso
+from report import loso_compare
+
+r_ext  = load_raw_annotation(CSV_PATH, definition='extended')   # current manuscript definition
+r_core = load_raw_annotation(CSV_PATH, definition='core')       # true ictal interval only
+
+res_ext  = run_loso(r_ext,  XGBoostModel, params={}, label='extended (label==1)')
+res_core = run_loso(r_core, XGBoostModel, params={}, label='core-ictal only')
+loso_compare([res_ext, res_core], baseline=0)     # paired per-patient AUC difference + Wilcoxon
+```
+`definition='core'` drops the pre/post-ictal-only windows (label==1 but not in_core_ictal) entirely --
+they are neither its positive nor its negative class. `feats`/`patient`/`cols` come out in the same
+shape as `preprocessing.load_raw()`, so `run_loso` needs no changes. A per-patient warning is printed
+if a patient has under 10 positive windows in the `'core'` definition.
+
 ## Leave-One-Subject-Out (LOSO)
 ```python
 raw = load_raw(CSV_PATH)                                       # read the CSV once
