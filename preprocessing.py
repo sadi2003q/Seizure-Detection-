@@ -12,7 +12,19 @@ VAL_PATIENTS  = ['chb14', 'chb15']
 NORM_MODES = (None, 'interictal', 'all')
 NORM_GROUP = 'subject_id'   # finest grouping in the CSV (chb17a/b/c and chb21 are separate sessions)
 CLIP = 20.0                 # after per-patient scaling, values are clipped to [-CLIP, CLIP]
-FEATURE_SETS = ('all', 'conventional', 'snn')
+FEATURE_SETS = ('all', 'conventional', 'snn', 'no_time', 'no_freq', 'no_wavelet', 'no_nonlinear',
+               'time', 'freq', 'wavelet', 'nonlinear')
+
+# The 34 conventional feature names, grouped exactly as in the manuscript's Tables 1-4.
+# Order matches the CSV's per-channel column order; used only to build column masks below.
+_TIME_FEATS = ['skewness', 'kurtosis', 'zcr', 'ptp', 'curve_len', 'hjorth_mob', 'hjorth_comp', 'iqr']
+_FREQ_FEATS = ['delta_pow', 'theta_pow', 'alpha_pow', 'beta_pow', 'gamma_pow', 'mean_freq',
+              'dom_freq', 'spec_entropy', 'alpha_beta_ratio', 'spec_flatness', 'spec_edge_95']
+_WAV_FEATS  = ['wav_e1', 'wav_e2', 'wav_e3', 'wav_e4', 'wav_entropy', 'wav_total_e',
+              'wav_hf_ratio', 'wav_std']
+_NONLIN_FEATS = ['perm_entropy', 'petrosian_fd', 'nleo_mean', 'nleo_std', 'hilbert_amp',
+                'hilbert_phase_std', 'crest_factor']
+assert len(_TIME_FEATS) + len(_FREQ_FEATS) + len(_WAV_FEATS) + len(_NONLIN_FEATS) == 34
 
 
 def _patient(subject_id):
@@ -94,13 +106,26 @@ def load_raw(csv_path, per_patient_norm=None):
 
 def select_features(raw, features='all'):
     """Column indices for the ablation study.
-    'all' (924), 'conventional' (no spike features) or 'snn' (spike features only)."""
+    'all' (924 cols) / 'conventional' (no SNN, 748) / 'snn' (SNN only, 176)
+    'no_time' / 'no_freq' / 'no_wavelet' / 'no_nonlinear' -- drop one conventional domain,
+        keep the other 3 conventional domains + SNN (i.e. everything except that one domain)
+    'time' / 'freq' / 'wavelet' / 'nonlinear' -- that domain ALONE (no other conventional
+        domain, no SNN), for reporting each domain's own standalone AUC
+    """
     if features not in FEATURE_SETS:
         raise ValueError(f"features must be one of {FEATURE_SETS}, got {features!r}")
-    is_snn = np.array([c.split('_', 1)[1].startswith('snn_') for c in raw['cols']])
+    names = np.array([c.split('_', 1)[1] for c in raw['cols']])
+    is_snn = np.array([n.startswith('snn_') for n in names])
     if features == 'all':
         return np.arange(len(raw['cols']))
-    return np.where(is_snn if features == 'snn' else ~is_snn)[0]
+    if features in ('conventional', 'snn'):
+        return np.where(is_snn if features == 'snn' else ~is_snn)[0]
+
+    domain_names = {'time': _TIME_FEATS, 'freq': _FREQ_FEATS,
+                    'wavelet': _WAV_FEATS, 'nonlinear': _NONLIN_FEATS}
+    key = features[3:] if features.startswith('no_') else features
+    is_domain = np.isin(names, domain_names[key])
+    return np.where(~is_domain)[0] if features.startswith('no_') else np.where(is_domain)[0]
 
 
 def make_split(raw, train_patients, val_patients, test_patients, seed=42, verbose=True):

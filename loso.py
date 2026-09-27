@@ -37,7 +37,10 @@ def run_loso(raw, family, params=None, features='all', hold_out=None, n_val=2,
     raw      : from preprocessing.load_raw(csv)
     family   : a model class, e.g. XGBoostModel
     params   : model parameters (tune=False), or overrides applied AFTER tuning (tune=True)
-    features : 'all' | 'conventional' (no spike features) | 'snn' (spike features only)
+    features : 'all' | 'conventional' (no spike features) | 'snn' (spike features only) |
+               'no_time' / 'no_freq' / 'no_wavelet' / 'no_nonlinear' (drop one conventional
+               domain, keep the rest + SNN) | 'time' / 'freq' / 'wavelet' / 'nonlinear'
+               (that domain alone, for its own standalone AUC)
     hold_out : list of patients to hold out (default: every patient). Use 2 or 3 to test quickly.
     n_val    : number of other patients used ONLY to pick the threshold in each fold
     tune     : True -> Optuna runs INSIDE every fold on that fold's training patients only (very slow)

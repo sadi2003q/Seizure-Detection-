@@ -70,6 +70,29 @@ they are neither its positive nor its negative class. `feats`/`patient`/`cols` c
 shape as `preprocessing.load_raw()`, so `run_loso` needs no changes. A per-patient warning is printed
 if a patient has under 10 positive windows in the `'core'` definition.
 
+## SHAP analysis (R1-11)
+```python
+from shap_analysis import loso_shap, shap_report
+raw = load_raw(CSV_PATH)
+res = loso_shap(raw, XGBoostModel, params={}, top_n=10)   # each fold's OWN trained model
+shap_report(res)
+```
+Reports top-N features by pooled mean |SHAP|, direction of effect, one correctly-classified
+seizure and one non-seizure example, and how often each top feature also appears in that SAME
+fold's own top-N list (stability across patients). Needs `pip install shap`. Only works with
+tree models (XGBoost).
+
+## Domain ablation (R2-4, remaining half)
+`select_features` now also supports single-domain removal/isolation:
+`'no_time' / 'no_freq' / 'no_wavelet' / 'no_nonlinear'` (drop one domain, keep the rest + SNN) and
+`'time' / 'freq' / 'wavelet' / 'nonlinear'` (that domain alone). Same LOSO folds, same classifier,
+same `loso_compare` paired statistics as the existing SNN ablation.
+```python
+domain_runs = [run_loso(raw, XGBoostModel, params={}, features=f, label=f)
+              for f in ['conventional', 'no_time', 'no_freq', 'no_wavelet', 'no_nonlinear']]
+loso_compare(domain_runs, baseline=0)
+```
+
 ## Leave-One-Subject-Out (LOSO)
 ```python
 raw = load_raw(CSV_PATH)                                       # read the CSV once
