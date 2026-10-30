@@ -1,2 +1,14 @@
-Epileptic_Sub_Eve_ID.csv
-review_result.csv
+# Data files (CHB-MIT is downloaded separately from PhysioNet)
+*.csv
+*.edf
+results/
+
+# Python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Editors and operating system
+.idea/
+.vscode/
+.DS_Store

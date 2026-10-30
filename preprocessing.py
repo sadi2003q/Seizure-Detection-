@@ -15,7 +15,7 @@ CLIP = 20.0                 # after per-patient scaling, values are clipped to [
 FEATURE_SETS = ('all', 'conventional', 'snn', 'no_time', 'no_freq', 'no_wavelet', 'no_nonlinear',
                'time', 'freq', 'wavelet', 'nonlinear')
 
-# The 34 conventional feature names, grouped exactly as in the manuscript's Tables 1-4.
+# The 34 conventional feature names, grouped exactly as in the paper's feature tables.
 # Order matches the CSV's per-channel column order; used only to build column masks below.
 _TIME_FEATS = ['skewness', 'kurtosis', 'zcr', 'ptp', 'curve_len', 'hjorth_mob', 'hjorth_comp', 'iqr']
 _FREQ_FEATS = ['delta_pow', 'theta_pow', 'alpha_pow', 'beta_pow', 'gamma_pow', 'mean_freq',

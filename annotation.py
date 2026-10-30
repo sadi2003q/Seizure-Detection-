@@ -1,8 +1,8 @@
 # annotation.py
-"""R1-7: does the +10s/-5s annotation extension inflate performance?
+"""Seizure-label definition test: does the +10 s / +5 s annotation extension change performance?
 
 Compares two label definitions on the SAME preprocessing pipeline:
-  'extended'  : label == 1  (what the manuscript currently uses; includes pre/post-ictal)
+  'extended'  : label == 1  (the definition used in the paper; includes pre/post-ictal margins)
   'core'      : in_core_ictal == True  (only the true seizure onset-to-offset interval)
 
 Rows that are label==1 but NOT in_core_ictal (the pre/post-ictal-only windows) are
@@ -14,7 +14,7 @@ import numpy as np
 def load_raw_annotation(csv_path, definition='extended', per_patient_norm=None):
     """Same as preprocessing.load_raw(), but lets you choose the positive-class definition.
 
-    definition : 'extended' (default, current manuscript) or 'core' (R1-7 test)
+    definition : 'extended' (default, as in the paper) or 'core' (true seizure interval only)
     Returns a `raw` dict with the SAME shape as load_raw(), so it plugs straight into
     make_split() / run_loso() with no other code changes.
     """
@@ -26,7 +26,7 @@ def load_raw_annotation(csv_path, definition='extended', per_patient_norm=None):
 
     df = pd.read_csv(csv_path)
     if 'in_core_ictal' not in df.columns:
-        raise ValueError("This CSV has no 'in_core_ictal' column; the R1-7 comparison needs it.")
+        raise ValueError("This CSV has no 'in_core_ictal' column; the label-definition comparison needs it.")
 
     if definition == 'core':
         # drop the pre/post-ictal-only windows (label==1 & not core); keep label==0 and core-ictal

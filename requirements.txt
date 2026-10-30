@@ -1,0 +1,20 @@
+# Modelling pipeline (main.ipynb)
+numpy
+pandas
+scipy
+scikit-learn
+xgboost
+optuna
+tqdm
+matplotlib
+ipython
+
+# Optional: SHAP explanation analysis (shap_analysis.py)
+shap
+
+# Optional: Mamba model (models/mamba_model.py); mamba-ssm is used if available, otherwise a pure-PyTorch fallback
+torch
+
+# Feature extraction from raw CHB-MIT EDF files (feature_extraction.ipynb)
+mne
+PyWavelets
