@@ -1,6 +1,6 @@
 # models/mamba_model.py
 # Optional. Needs PyTorch. Uses the official mamba_ssm if available (NVIDIA GPU),
-# otherwise a pure-PyTorch fallback (state this in the paper if the fallback is used).
+# otherwise a pure-PyTorch fallback (report it if the fallback is used).
 import numpy as np
 import torch, torch.nn as nn, torch.nn.functional as F
 from tqdm.auto import tqdm

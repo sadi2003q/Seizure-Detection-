@@ -1,5 +1,5 @@
 # shap_analysis.py
-"""R1-11: SHAP analysis on the leak-free LOSO model.
+"""SHAP (SHapley Additive exPlanations) analysis on the leak-free LOSO model.
 
 Computes SHAP values for each held-out patient's fold (using that fold's own trained
 model, so SHAP never sees a model trained on the patient it explains), then aggregates:
